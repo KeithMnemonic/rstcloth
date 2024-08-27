@@ -54,6 +54,18 @@ class RstCloth:
         :param subsequent_indent: subsequent lines indentation size
         :return: wrapped and indented text
         """
+        lines = text.split('\r\n')
+        
+        if '|' in text and len(lines) > 1:
+            new_text = ""
+            for i in range(len(lines)):
+                if i == 0:
+                    new_text += "   " + lines[i]  + "\n"
+                elif i == (len(lines) - 1):
+                    new_text += "      " + lines[i]
+                else:
+                    new_text += "      " + lines[i] + "\n"
+            return(new_text)
         return textwrap.fill(
             text=text,
             width=self._line_width,
@@ -70,7 +82,6 @@ class RstCloth:
 
         :param content: the text to write into this element
         """
-
         if isinstance(content, list):
             self._stream.write("\n".join(content) + "\n")
         else:
@@ -129,8 +140,10 @@ class RstCloth:
         headers: typing.Iterable,
         data: t_optional_2d_array,
         widths: t_widths = None,
+        table_class: str= None,
         width: t_width = None,
         indent: int = 0,
+        table_name: str = None,
     ) -> None:
         """
         Constructs list table.
@@ -155,6 +168,10 @@ class RstCloth:
             fields.append(("widths", widths))
         if width is not None:
             fields.append(("width", str(width)))
+        if table_class is not None:
+            fields.append(("class", str(table_class)))
+        if table_name is not None:
+            fields.append(("table_name", str(table_name)))
 
         self.directive("list-table", fields=fields, indent=indent)
         self.newline()
@@ -180,7 +197,15 @@ class RstCloth:
         :param indent: number of spaces to indent this element
         """
         if arg is None:
-            marker = ".. {type}::".format(type=name)
+            if name == "list-table":
+                for k, v in fields:
+                    if k == 'table_name' and v is not None:
+                        marker = ".. {type}:: {t_name}".format(type=name, t_name=v)
+                    else:
+                        marker = ".. {type}::".format(type=name)
+            else: 
+                marker = ".. {type}::".format(type=name)
+
             self._add(_indent(marker, indent))
         else:
             first_whitespace = first_whitespace_position(arg)
@@ -199,6 +224,8 @@ class RstCloth:
 
         if fields is not None:
             for k, v in fields:
+                if k == 'table_name':
+                    continue
                 self.field(name=k, value=v, indent=indent + 3)
 
         if content is not None:
